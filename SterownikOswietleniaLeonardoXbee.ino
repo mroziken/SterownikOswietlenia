@@ -28,13 +28,21 @@
 #define in2 13 // do przyszlego wykorzystania
 #define dsep "-"
 #define tsep ":"
+#define DTLEN 20
 
+int dummy; 
+int count=0;
+int charsReceived = 0;
+String loffStr;
+String lonStr;
+String strDT="";
+char XBee_Data[30];
+boolean DEBUG=true;
 
 uint16_t sendErrors = 0;
 
 // one byte payload
 uint8_t payload[30];
-
 // TODO replace with address of your coordinator (Connected to the Java app)
 uint32_t COORD_MSB_ADDRESS = 0x0013a200;
 uint32_t COORD_LSB_ADDRESS = 0x40b189b7;
@@ -49,18 +57,6 @@ ZBTxStatusResponse txStatus = ZBTxStatusResponse();
 // create reusable response objects for responses we expect to handle 
 ZBRxResponse rx = ZBRxResponse();
 
-
-int dummy; 
-int count=0;
-int charsReceived = 0;
-
-String loffStr;
-String lonStr;
-String strDT="";
-
-char XBee_Data[30];
-
-boolean DEBUG=true;
 
 //Reset urzadzenia
 void(* resetFunc) (void) = 0;//declare reset function at address 0
@@ -89,14 +85,10 @@ void debug(String str){
 
 void replay(String str){
    debug("RP"); //Replay
-   str=str+"="+strDT;
-   debug(str);
-   //strDT="";
-   //payload[0] = atoi(&str[0]);
-   str.getBytes(payload,str.length());
-   //for (int i=0; i<sizeof(buf); i++){
-    // payload[i] = buf[i];
-   //}
+   String STR="";
+   STR=str+"="+strDT;
+   debug(STR);
+   STR.getBytes(payload,STR.length());
 
    
    xbee.send(tx);
@@ -128,7 +120,8 @@ void replay(String str){
   } 
         debug("EOR"); //end of replay
         //memset(&buf[0], 0, sizeof(buf));
-        //memset(&payload[0], 0, sizeof(payload));
+        memset(&payload[0], 0, sizeof(payload));
+        strDT="";
 }
 
 void parseReceivedText(char *XBee_Data,int len){
@@ -454,7 +447,6 @@ void setup() {
 void handleXBeeResponse(){
   debug("In handleXBeeResponse");
   memset(&XBee_Data[0], 0, sizeof(XBee_Data));
-  memset(&strDT, 0, sizeof(strDT));
   if (xbee.getResponse().getApiId() == ZB_RX_RESPONSE){
       myBlink(2,1);
       
@@ -472,14 +464,14 @@ void handleXBeeResponse(){
       else {
         dummy=rx.getDataLength();
       }
-    if (dummy>=19){
+    if (dummy>=DTLEN){
         for (count=0;count<=dummy-1;count++){
               XBee_Data[count]=rx.getData(count);
             }
-         for (count=0;count<=18;count++){
-           strDT+=XBee_Data[count];
+         for (count=0;count<=DTLEN-1;count++){
+           strDT+=rx.getData(count);
          }
-         parseReceivedText(&XBee_Data[19],dummy);
+         parseReceivedText(&XBee_Data[DTLEN],dummy);
       }
       else{
         debug("PTS"); //Payload to short
